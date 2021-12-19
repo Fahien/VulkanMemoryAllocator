@@ -4022,7 +4022,8 @@ void *vma_aligned_alloc(size_t alignment, size_t size)
 #endif
 
 #ifndef VMA_ALIGN_OF
-   #define VMA_ALIGN_OF(type)       (__alignof(type))
+   #define VMA_MIN_ALIGN_OF         (8ul)
+   #define VMA_ALIGN_OF(type)       (VMA_MAX(VMA_MIN_ALIGN_OF, __alignof(type)))
 #endif
 
 #ifndef VMA_SYSTEM_ALIGNED_MALLOC
@@ -4698,7 +4699,12 @@ static T* VmaAllocate(const VkAllocationCallbacks* pAllocationCallbacks)
 template<typename T>
 static T* VmaAllocateArray(const VkAllocationCallbacks* pAllocationCallbacks, size_t count)
 {
-    return (T*)VmaMalloc(pAllocationCallbacks, sizeof(T) * count, VMA_ALIGN_OF(T));
+    size_t min_size = sizeof(T) * count;
+    size_t aligned_size = VMA_ALIGN_OF(T);
+    while (aligned_size < min_size) {
+        aligned_size *= 2;
+    }
+    return (T*)VmaMalloc(pAllocationCallbacks, aligned_size, VMA_ALIGN_OF(T));
 }
 
 #define vma_new(allocator, type)   new(VmaAllocate<type>(allocator))(type)
@@ -8018,7 +8024,12 @@ static T* VmaAllocate(VmaAllocator hAllocator)
 template<typename T>
 static T* VmaAllocateArray(VmaAllocator hAllocator, size_t count)
 {
-    return (T*)VmaMalloc(hAllocator, sizeof(T) * count, VMA_ALIGN_OF(T));
+    size_t min_size = sizeof(T) * count;
+    size_t aligned_size = VMA_ALIGN_OF(T);
+    while (aligned_size < min_size) {
+        aligned_size *= 2;
+    }
+    return (T*)VmaMalloc(hAllocator, aligned_size, VMA_ALIGN_OF(T));
 }
 
 template<typename T>
